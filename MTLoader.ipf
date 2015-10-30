@@ -1,7 +1,7 @@
 #pragma rtGlobals=3		// Use modern global access method and strict wave access.
 
 //This function loads all the the bundles from different excel sheets in a directory
-//It makes MT waves like MTMaker does.
+//It makes MT waves like MTMaker does
 Function MTLoader()
 	
 	NewDataFolder/O/S root:data
@@ -41,6 +41,7 @@ End
 
 //This function will find number of MTs, the area, the density for each bundle
 Function BundleStats()
+
 	SetDataFolder root:data:
 	DFREF dfr = GetDataFolderDFR()
 	String folderName
@@ -147,98 +148,25 @@ Function BundleStats()
 	Execute "TileWindows/O=1/C"
 End
 
-
-//This function will find the angles of all Mts in each bundle.
-//It makes maps for each bundle colour-coded according to phi or theta.
-Function FindAngles()
-	SetDataFolder root:data:
-	DFREF dfr = GetDataFolderDFR()
-	String folderName
-	Variable numDataFolders = CountObjectsDFR(dfr, 4)
-	Variable nWaves
-	String wList, wName
+//simplifies busy experiments
+//example: ShowMe("img*") //looks at heatmaps only
+//ShowMe("map*") //looks at maps only
+//ShowMe("*") //resets to see show all windows
+//ShowMe("*GFP*") //shows all GFP windows
+Function ShowMe(key)
+	string key
 	
-	Variable i,j
-		
-	for(i=0; i<numDataFolders; i+=1)
-		folderName = GetIndexedObjNameDFR(dfr, 4, i)
-		If(stringmatch(folderName,"packages")==0)
-		SetDataFolder $folderName
-		Print folderName
-		SpherCoord()
-		Wave SCThetaWave
-		Wave SCPhiWave
-		wList=WaveList("MT*",";","")
-		nWaves=ItemsInList(wList)
-		Make/O/N=(nWaves,2) xyMap
-		for (j = 0; j < nWaves; j += 1)
-			wName = StringFromList(j,wList)
-			Wave w1=$wName
-			xyMap[j][0]=w1[0][0]	//x coord at bottom of tomogram
-			xyMap[j][1]=w1[0][1]	//y coord at bottom of tomogram
-		endfor
-		Display xyMap[][1] vs xyMap[][0]
-		ModifyGraph mode=3,marker=8
-		ModifyGraph zColor(xyMap)={SCthetaWave,0,1.57,Rainbow,1}	//theta scale 0 to pi/2
-		SetAxis/R left 819.2,0;DelayUpdate
-		SetAxis bottom 0,1100.8
-		ModifyGraph mirror=1
-		ModifyGraph width={Aspect,1.34375}
-		TextBox/C/N=text0/B=1/F=0/X=0.00/Y=0.00 "\\Z14\\F'Symbol'q"
-		TextBox/C/N=text1/B=1/F=0/A=LT/X=0.00/Y=0.00 foldername
-		
-		Display xyMap[][1] vs xyMap[][0]
-		ModifyGraph mode=3,marker=8
-		ModifyGraph zColor(xyMap)={SCphiWave,-3.14,3.14,Rainbow,1}	//phi scale -pi to pi
-		SetAxis/R left 819.2,0;DelayUpdate
-		SetAxis bottom 0,1100.8
-		ModifyGraph mirror=1
-		ModifyGraph width={Aspect,1.34375}
-		TextBox/C/N=text0/B=1/F=0/X=0.00/Y=0.00 "\\Z14\\F'Symbol'j"
-		TextBox/C/N=text1/B=1/F=0/A=LT/X=0.00/Y=0.00 foldername
+	string fulllist = WinList("*", ";","WIN:1")
+	string name
+	variable i
+ 
+	for(i=0; i<itemsinlist(fulllist); i +=1)
+		name= stringfromlist(i, fulllist)
+		If(StringMatch(name, key )==1)
+			Dowindow/HIDE=0 $name //show window
 		Else
-			return 0
-		Endif
-		SetDataFolder dfr
+			Dowindow/HIDE=1 $name //hide window
+		EndIf
 	endfor
-End
-
-//check maps
-Function CheckMaps(startexp,endexp)
-	Variable startexp,endexp
-	
-	Execute "NewGizmo"
-	SetDataFolder root:data:
-	DFREF dfr = GetDataFolderDFR()
-	String folderName
-	Variable numDataFolders = CountObjectsDFR(dfr, 4)
-	
-	Variable i
-		
-	for(i=startexp; i<endexp+1; i+=1)
-		folderName = GetIndexedObjNameDFR(dfr, 4, i)
-		If(stringmatch(folderName,"packages")==0)
-		SetDataFolder $folderName
-		Print folderName
-		MTplotter()
-		Else
-			return 0
-		Endif
-		SetDataFolder dfr
-	endfor
-End
-
-//Function from Igor help edited to list foldernames
-Function PrintAllWaveNames()
-		String objName
-		Variable index = 0
-		DFREF dfr = GetDataFolderDFR()	// Reference to current data folder
-		do
-			objName = GetIndexedObjNameDFR(dfr, 4, index)
-			if (strlen(objName) == 0)
-				break
-			endif
-			Print objName
-			index += 1
-		while(1)
+	Execute "TileWindows/O=1/C"
 End
