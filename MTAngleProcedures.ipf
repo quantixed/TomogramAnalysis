@@ -5,7 +5,7 @@
 #include <TintedWindowBackground>
 
 //This function makes MT waves - these are 2d waves (3 columns = x y z, 2 rows = start end)
-//The input is from excel where each column is a MT rows are: MT number, startx,starty,startz,endx,endy,endz
+//The input is from excel where each column is a MT rows are: MT number, startx,starty,startz,endx,endy,endz.
 //It basically just rejigs this list.
 Function MTmaker(wavenames)
 	String wavenames	//this will be wavelist("wave*",";","")
@@ -268,16 +268,16 @@ Function SpherCoord([rot])
 
 			rW[i]=sqrt((wx^2)+(wy^2)+(wz^2))
 			thetaW[i]=acos(wz/(sqrt((wx^2)+(wy^2)+(wz^2))))
-			//need to *(180/pi) to get ¡			
+			//need to *(180/pi) to get Â¡			
 			phiW[i]=atan2(wy,wx)
 	endfor
 	Variable V_avg,V_sdev
 	Wavestats /q rW
-	Print "Radial distance, r: mean",V_avg,"±",V_sdev,"nm. Median =",Statsmedian(rW)
+	Print "Radial distance, r: mean",V_avg,"Â±",V_sdev,"nm. Median =",Statsmedian(rW)
 	Wavestats /q thetaW
-	Print "Polar angle, theta: mean",V_avg,"±",V_sdev,"radians. Median =",Statsmedian(thetaW)
+	Print "Polar angle, theta: mean",V_avg,"Â±",V_sdev,"radians. Median =",Statsmedian(thetaW)
 	Wavestats /q phiW
-	Print "Azimuthal angle, phi: mean" ,V_avg,"±",V_sdev,"radians. Median =",Statsmedian(phiW)
+	Print "Azimuthal angle, phi: mean" ,V_avg,"Â±",V_sdev,"radians. Median =",Statsmedian(phiW)
 End
 
 Function Straight(phi,theta)
@@ -304,10 +304,10 @@ End
 Function LowPoint()
 	
 	variable theta,phi //in radians
-	Make /o /n=90 MatThetaWave	//90¡ is sufficient with no reflection (and reversal of Mt polarity)
+	Make /o /n=90 MatThetaWave	//90Â¡ is sufficient with no reflection (and reversal of Mt polarity)
 	MatThetaWave =x/(180/PI)
 	Make /o /n=360 MatPhiWave
-	MatPhiWave =x/(180/PI)	//1¡ increments seem OK. For 24 MTs, only 0.03 nm difference for increments from lowpoint
+	MatPhiWave =x/(180/PI)	//1Â¡ increments seem OK. For 24 MTs, only 0.03 nm difference for increments from lowpoint
 	Make /o /n=(360,90) MatResWave
 
 	String wList=wavelist("MT*",";","")
