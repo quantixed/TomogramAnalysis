@@ -151,6 +151,7 @@ Function BundleStats()
 		//Do Angle Analysis
 		LowPoint()
 		SpherCoord()
+		MakePlane()
 			
 		Else
 			return 0
@@ -177,28 +178,30 @@ Function PullOut(expA,expB)
 	Wave stD = root:stDensityWave
 	Variable nExp = numpnts(stMT)
 
-	String expC,wName
+	String expC,wName,fList="",cList=""
 	Make/O/N=(nExp) root:stInd
 	Wave stN = root:stInd
 	Variable i, j, k
 	
 	For (i=0; i < ItemsInList(expA); i+=1)
 		For (j=0; j < ItemsInList(expB); j+=1)
+			fList=""
 			expC=StringFromList(i,expA) + "_" + StringFromList(j,expB)
 			For (k=0; k < nExp; k+=1)
 				If(stringmatch(stB[k],expC + "*")==1)
 					stN[k]=1
+					fList = fList + ":" + stB[k] + ";"
 				Else
 					stN[k]=0
 				EndIf
 			EndFor
-			wName="root:sm" + expC + "MT"
+			wName="root:sm" + expC + "_MT"
 			Duplicate /O stMT, $wName
 			Wave w0 = $wName
-			wName="root:sm" + expC + "Area"
+			wName="root:sm" + expC + "_Area"
 			Duplicate /O stA, $wName
 			Wave w1 = $wName
-			wName="root:sm" + expC + "Density"
+			wName="root:sm" + expC + "_Density"
 			Duplicate /O stD, $wName
 			Wave w2 = $wName
 			Duplicate /O stD, w2
@@ -208,9 +211,29 @@ Function PullOut(expA,expB)
 			WaveTransform zapnans w0
 			WaveTransform zapnans w1
 			WaveTransform zapnans w2
+			If(numpnts(w0)==0)
+				KillWaves w0,w1,w2
+			Else
+				wName="root:sn" + expC + "_refDist"
+				cList=ReplaceString(";", fList, ":RefDistWave;")
+				Concatenate /O /NP=0 cList, $wName
+				
+				wName="root:sn" + expC + "_rSCtheta"
+				cList=ReplaceString(";", fList, ":rSCthetaWave;")
+				Concatenate /O /NP=0 cList, $wName
+					
+				wName="root:sn" + expC + "_rSCphi"
+				cList=ReplaceString(";", fList, ":rSCphiWave;")
+				Concatenate /O /NP=0 cList, $wName
+				
+				wName="root:sn" + expC + "_rSCxyPlane"
+				cList=ReplaceString(";", fList, ":rSCxyPlaneWave;")
+				Concatenate /O /NP=0 cList, $wName
+			endif
 		EndFor
 	EndFor
 	KillWaves stN
+	SetDataFolder root:
 End
 
 //simplifies busy experiments
@@ -359,4 +382,21 @@ Function SpherCoord()
 //	Print "Polar angle, theta: mean",V_avg,"±",V_sdev,"radians. Median =",Statsmedian(thetaW)
 	Wavestats /q phiW
 //	Print "Azimuthal angle, phi: mean" ,V_avg,"±",V_sdev,"radians. Median =",Statsmedian(phiW)
+End
+
+Function MakePlane()	//find intersection of mrMTs with plane at z=100
+	Wave rSCrWave,rSCthetaWave,rSCphiWave
+	Variable i
+	Variable n=numpnts(rSCrWave)
+	Make /O /N=(n,2) rSCxyPlaneWave	//x y values in 2D wave
+	Variable xb,yb,zb,t //xa,ya,za are 0,0,0 and t will be 100/xb
+	
+	for(i = 0;i < n;i +=1)
+			xb=rSCrWave[i]*(sin(rSCthetaWave[i]))*(cos(rSCphiWave[i]))
+			yb=rSCrWave[i]*(sin(rSCthetaWave[i]))*(sin(rSCphiWave[i]))
+			zb=rSCrWave[i]*(cos(rSCthetaWave[i]))
+			t=100/zb
+			rSCxyPlaneWave[i][0]=xb*t
+			rSCxyPlaneWave[i][1]=yb*t
+	endfor
 End
