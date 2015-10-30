@@ -1,0 +1,679 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1344\cocoasubrtf720
+{\fonttbl\f0\fswiss\fcharset0 Helvetica;\f1\fnil\fcharset0 Consolas;\f2\fnil\fcharset0 Consolas-Italic;
+}
+{\colortbl;\red255\green255\blue255;\red204\green0\blue163;\red255\green0\blue0;\red0\green0\blue255;
+\red0\green156\blue0;\red195\green78\blue0;\red0\green117\blue117;}
+\paperw11900\paperh16840\margl1440\margr1440\vieww12600\viewh7800\viewkind0
+\deftab720
+\pard\pardeftab720\ri380
+
+\f0\b\fs22 \cf0 Code for MT analysis in Nixon et al., 2015.\
+\pard\pardeftab720\ri380
+
+\b0 \cf0 \
+The following procedures were used with MT co-ordinate sets using Igor Pro 6.3x (Wavemetrics). The following code can be used as a *.ipf to perform similar analyses.\
+\
+\pard\pardeftab720\ri380
+
+\f1\fs16 \cf2 \
+#pragma\cf0  rtGlobals=3		
+\f2\i \cf3 // Use modern global access method and strict wave access.
+\f1\i0 \cf0 \
+\cf2 #include\cf0  <All Gizmo Procedures>\
+
+\f2\i \cf3 \
+//This function will calculate the cross-sectional area of a MT bundle
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //It will also count the MTs in the bundle and work out the density of MTs/area
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //Requires 2 x 1D waves one with x co-ords, 1 with y co-ords 
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  AreaCalc(theXList,theYlist)\
+	\cf4 String\cf0  theXList\
+	\cf4 String\cf0  theYList\
+	\
+	\cf4 Variable\cf0  i=0\
+	\cf4 string\cf0  aWaveName = \cf5 ""\cf0 \
+	\cf4 string\cf0  bWaveName = \cf5 ""\cf0 \
+	\cf4 Variable\cf0  nsize=\cf6 ItemsInList\cf0 (theXlist)\
+	\cf7 Make\cf0  /O /T /N=(nsize) TextWave0	
+\f2\i \cf3 //this will be a list of wavenames
+\f1\i0 \cf0 \
+	\cf7 Make\cf0  /O /N=(nsize) areaWave		
+\f2\i \cf3 //this will contain the cross sectional areas
+\f1\i0 \cf0 \
+	\cf7 Make\cf0  /O /N=(nsize) MTWave			
+\f2\i \cf3 //this will contain the number of MTs
+\f1\i0 \cf0 \
+	\cf4 Wave\cf0  W_Xhull,W_Yhull\
+	\cf4 do\cf0 \
+		aWaveName = \cf6 StringFromList\cf0 (i, theXList)\
+		bWavename = \cf6 StringFromList\cf0 (i, theYList)\
+		\cf4 WAVE\cf0 /\cf6 Z\cf0  aWave = $aWaveName\
+		\cf4 WAVE\cf0 /\cf6 Z\cf0  bWave = $bWaveName\
+		\cf4 if\cf0  (!\cf6 WaveExists\cf0 (aWave))\
+			\cf4 break\cf0 \
+		\cf4 endif\cf0 \
+			TextWave0[i]=aWaveName\
+			\cf7 ConvexHull\cf0  /C aWave,bWave\
+			areaWave[i]=\cf6 polygonarea\cf0 (W_Xhull,W_Yhull)\
+			MTWave[i]=\cf6 numpnts\cf0 (aWave)\
+		i += 1\
+	\cf4 while\cf0 (1)\
+	\cf7 duplicate\cf0  /o MTWave DensityWave\
+	Densitywave /=areaWave	
+\f2\i \cf3 //calculate density
+\f1\i0 \cf0 \
+	\cf7 edit\cf0  Textwave0,MTWave,AreaWave,DensityWave\
+\cf4 End\cf0 \
+\
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //This function will calculate the distance to the nearest neighbour for each MT
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //Requires 2 x 1D waves one with x coordinates, 1 with y coordinates 
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  NNFinder(theXList,theYlist)\
+	\cf4 String\cf0  theXList\
+	\cf4 String\cf0  theYList\
+	\
+	\cf4 String\cf0  xWave, yWave\
+	\cf4 Variable\cf0  nWaves\
+	\cf4 Variable\cf0  i	
+\f2\i \cf3 //waveindex
+\f1\i0 \cf0 \
+	\cf4 Variable\cf0  j	
+\f2\i \cf3 //1stMT
+\f1\i0 \cf0 \
+	\cf4 Variable\cf0  k	
+\f2\i \cf3 //rowindex
+\f1\i0 \cf0 \
+	\cf4 Variable\cf0  ncr	
+\f2\i \cf3 //combinations to be evaluated
+\f1\i0 \cf0 \
+	\
+	nWaves = \cf6 ItemsInList\cf0 (theXList)\
+	ncr=nwaves*(nwaves-1)\
+	\cf7 Make\cf0  /O /N=(ncr) TempWave\
+	\cf7 Make\cf0  /O /N=(nWaves) DistWave\
+	\
+	\cf4 for\cf0  (i = 0; i < nWaves; i += 1)\
+	xWave = \cf6 StringFromList\cf0 (i, theXlist)\
+	yWave = \cf6 StringFromList\cf0 (i, theYlist)\
+	\cf4 Wave\cf0 /\cf6 Z\cf0  xw = $xWave\
+	\cf4 Wave\cf0 /\cf6 Z\cf0  yw = $yWave\
+		\cf4 for\cf0  (j = 0; j < \cf6 numpnts\cf0 (xw); j+=1)\
+		k=0\
+		\cf4 if\cf0  (k==j)\
+			TempWave[k]=\cf6 nan\cf0 \
+		\cf4 else\cf0 \
+			TempWave[k]=\cf6 sqrt\cf0 (((xw[j]-xw[k])^2)+((yw[j]-yw[k])^2))\
+			k+=1\
+		\cf4 endif\cf0 \
+			\cf7 WaveStats\cf0  /Q TempWave\
+			DistWave[i]=V_min\
+		\cf4 endfor\cf0 \
+	\cf4 endfor\cf0 \
+\cf4 End\cf0 \
+\pard\pardeftab720\ri380
+\cf2 \
+\cf0 \
+
+\f2\i \cf3 //This function will take a list of x and y waves and go through them for a variety of sizes 
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //send to HowMany() to work out the number of neighbours within a range (of a given interval)
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  Send(theXList,theYlist,nmMin,nmMax,step)\
+	\cf4 String\cf0  theXlist	
+\f2\i \cf3 //wavelist of waves containing x co-ords in nm
+\f1\i0 \cf0 \
+	\cf4 String\cf0  theYlist	
+\f2\i \cf3 //wavelist of waves containing y co-ords in nm
+\f1\i0 \cf0 \
+	\cf4 Variable\cf0  nmMin	
+\f2\i \cf3 //minimum search radius e.g. 20
+\f1\i0 \cf0 \
+	\cf4 Variable\cf0  nmMax	
+\f2\i \cf3 //maximum search radius e.g. 120
+\f1\i0 \cf0 \
+	\cf4 Variable\cf0  step	
+\f2\i \cf3 //interval size for search radii e.g. 10 (20, 30,...,110,120)
+\f1\i0 \cf0 \
+	\
+	\cf7 Make\cf0  /o /N=(((nmmax-nmmin)/step)+1) StepWave\
+	StepWave =(\cf6 x\cf0 *step)+nmmin\
+	\
+	\cf4 Variable\cf0  i,s		
+\f2\i \cf3 //loop variables
+\f1\i0 \cf0 \
+	\cf4 String\cf0  xWave\
+	\cf4 String\cf0  yWave\
+	\
+	\cf4 for\cf0  (i = 0; i < \cf6 ItemsInList\cf0 (theXlist); i += 1)\
+	xWave = \cf6 StringFromList\cf0 (i, theXlist)\
+	yWave = \cf6 StringFromList\cf0 (i, theYlist)\
+		\cf4 for\cf0   (s = 0; s < \cf6 numpnts\cf0 (StepWave); s +=1)\
+		HowMany($xWave,$yWave,StepWave[s])\
+		\cf4 endfor\cf0 \
+	\cf4 endfor\cf0 \
+	\cf7 KillWaves\cf0  StepWave\
+\cf4 End\cf0 \
+\
+\
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //This function finds how many neighbouring MTs are within x nm of each MT
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  HowMany(xW,yW,nm)\
+	\cf4 Wave\cf0  xW\
+	\cf4 Wave\cf0  yW\
+	\cf4 Variable\cf0  nm		
+\f2\i \cf3 //search radius
+\f1\i0 \cf0 \
+	\
+	\cf4 Variable\cf0  mts		
+\f2\i \cf3 //number of MTs in the co-ordinate set
+\f1\i0 \cf0 \
+	\cf4 Variable\cf0  j 		
+\f2\i \cf3 //1stMT
+\f1\i0 \cf0 \
+	\cf4 Variable\cf0  k 		
+\f2\i \cf3 //2nd MT
+\f1\i0 \cf0 \
+	\cf4 Variable\cf0  l 		
+\f2\i \cf3 //rowindex of TempWave
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //	Variable ncr 	//combinations to be evaluated
+\f1\i0 \cf0 \
+	\
+	mts = \cf6 numpnts\cf0 (xW)\
+
+\f2\i \cf3 //	ncr=mts*(mts-1)
+\f1\i0 \cf0 \
+	\cf7 Make\cf0  /O /N=(mts) TempWave\
+	\cf7 Make\cf0  /O /N=(mts) NeighbourWave\
+	NeighbourWave =0\
+	\cf4 String\cf0  newname = \cf6 ReplaceString\cf0 (\cf5 "x_"\cf0 ,\cf6 NameofWave\cf0 (xW),\cf5 "nm_"\cf0 )+\cf5 "_"\cf0 +\cf6 num2str\cf0 (nm)\
+	\
+	\cf4 for\cf0  (j = 0; j < mts; j+=1)		
+\f2\i \cf3 //for each MT in fiber find all cartesian distances
+\f1\i0 \cf0 \
+		\cf4 for\cf0  (k = 0; k < mts; k+=1)\
+			TempWave[k]=\cf6 sqrt\cf0 (((xw[j]-xw[k])^2)+((yw[j]-yw[k])^2))	
+\f2\i \cf3 //store distances here
+\f1\i0 \cf0 \
+		\cf4 endfor\cf0 \
+		\
+		\cf4 for\cf0  (l = 0; l < mts; l += 1)	
+\f2\i \cf3 //go through distances, count those <= search radius
+\f1\i0 \cf0 \
+			\cf4 if\cf0  (TempWave[l]== 0)		
+\f2\i \cf3 //does not count 0 nm distances, i.e MT 
+\f1\i0 \cf0 \
+			\cf4 elseif\cf0  (TempWave[l]<=nm)\
+			NeighbourWave[j] +=1\
+			\cf4 endif\cf0 \
+		\cf4 endfor\cf0 \
+	\cf4 endfor\cf0 \
+	\cf7 Rename\cf0  NeighbourWave $newname\
+\pard\pardeftab720\ri380
+\cf4 End\cf0 \
+\
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //Procedure to randomize bch wave
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  Randomize(waveNames)\
+	\cf4 String\cf0  waveNames		
+\f2\i \cf3 //wavelist of bch waves for randomisation
+\f1\i0 \cf0 \
+	\
+	\cf4 Variable\cf0  i\
+	\cf4 For\cf0  (i = 0; i < \cf6 ItemsInList\cf0 (waveNames);i +=1)\
+		\cf4 String\cf0  name = \cf6 StringFromList\cf0 (i,waveNames)\
+		\cf4 Wave\cf0  /\cf6 z\cf0  w1 = $name\
+		\cf7 Make\cf0 /n=(\cf6 numpnts\cf0 (w1))/o keyw=\cf6 abs\cf0 (\cf6 enoise\cf0 (1))\
+		\cf7 Sort\cf0  keyw w1\
+	\cf4 EndFor\cf0 \
+	\cf7 Killwaves\cf0  keyw\
+\cf4 End\cf0 \
+\
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //Function to concatenate all values into one long wave.
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //For each search radius for each fibre, a 2D wave was made with branch membership data as 1st column and number of neighbours as 2nd
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //These 2D waves were concatenated by this function
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  Concat(root,w1Name)	
+\f2\i \cf3 // call example: Concat("nn_Ctrl*","Ctrl_all")
+\f1\i0 \cf0 \
+	\cf4 String\cf0  root				
+\f2\i \cf3 //prefix of waves
+\f1\i0 \cf0 \
+	\cf4 String\cf0  w1Name			
+\f2\i \cf3 //target wave
+\f1\i0 \cf0 \
+	\
+	\cf4 String\cf0  list=\cf6 wavelist\cf0 (root,\cf5 ";"\cf0 ,\cf5 ""\cf0 )\
+	\cf7 Concatenate\cf0  /o /NP=0 list, $w1Name	
+\f2\i \cf3 //creates new wave or overwrites existing
+\f1\i0 \cf0 \
+\cf4 End\cf0 \
+\
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //This is a simple gating function. Run on 2D waves and specify a "level", i.e. cut off for gating
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //The function will generate two waves lo and hi for w1 and then make a frequency histogram of both 
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  Splitter(w1,level) \
+	\cf4 wave\cf0  w1\
+	\cf4 variable\cf0  level				
+\f2\i \cf3 // level=1 for differentiating singles from branches
+\f1\i0 \cf0 \
+	\
+	\cf4 Variable\cf0  size =\cf6 dimsize\cf0 (w1,0)	
+\f2\i \cf3 //size of one column
+\f1\i0 \cf0 \
+	\cf4 string\cf0  waveloname=\cf6 NameofWave\cf0 (w1)+\cf5 "lo"\cf0 \
+	\cf4 string\cf0  wavehiname=\cf6 NameofWave\cf0 (w1)+\cf5 "hi"\cf0 \
+	\cf7 duplicate\cf0  /o w1 $waveloname	
+\f2\i \cf3 //these waves will be the new split waves
+\f1\i0 \cf0 \
+	\cf7 duplicate\cf0  /o w1 $wavehiname\
+	\cf4 wave\cf0  wavelo=$waveloname\
+	\cf4 wave\cf0  wavehi=$wavehiname\
+	\
+	\cf4 Variable\cf0  rowIndex			
+\f2\i \cf3 //the loop variable
+\f1\i0 \cf0 \
+   	\cf4 for\cf0  (rowIndex = 0; rowIndex < size; rowIndex += 1)\
+		\cf4 if\cf0  (w1[rowIndex][0]>level)\
+		wavelo[rowindex][]=\cf6 nan\cf0 \
+		\cf4 endif\cf0 \
+		\cf4 if\cf0  (w1[rowIndex][0]<=level)\
+		wavehi[rowIndex][]=\cf6 nan\cf0 \
+		\cf4 endif\cf0 \
+	\cf4 endfor\cf0 \
+	\cf4 string\cf0  newloname=\cf6 NameofWave\cf0 (w1) + \cf5 "lo2"\cf0 \
+	\cf4 string\cf0  newhiname=\cf6 NameofWave\cf0 (w1) + \cf5 "hi2"\cf0 \
+	\cf7 Duplicate\cf0 /O/R=[][1] wavelo, tempwave		
+\f2\i \cf3 //makes a copy of the 1st wave (but this is still multi-dimensional, so...)
+\f1\i0 \cf0 \
+	\cf7 Extract\cf0  tempwave, $newloname, tempwave>=0	
+\f2\i \cf3 // equivalent of zapnans into a new wave
+\f1\i0 \cf0 \
+	\cf7 Duplicate\cf0 /O/R=[][1] wavehi, tempwave		
+\f2\i \cf3 //makes a copy of the 1st wave (but this is still multi-dimensional, so...)
+\f1\i0 \cf0 \
+   	\cf7 Extract\cf0  tempwave, $newhiname, tempwave>=0	
+\f2\i \cf3 // equivalent of zapnans into a new wave
+\f1\i0 \cf0 \
+	\cf7 killwaves\cf0  tempwave						
+\f2\i \cf3 //clean up
+\f1\i0 \cf0 \
+	\cf4 string\cf0  newlohistname=\cf6 NameofWave\cf0 ($newloname) + \cf5 "_Hist"\cf0 \
+	\cf4 string\cf0  newhihistname=\cf6 NameofWave\cf0 ($newhiname) + \cf5 "_Hist"\cf0 \
+	\cf7 Make\cf0 /N=12/O $newlohistname				
+\f2\i \cf3 //use this to make a histogram
+\f1\i0 \cf0 \
+	\cf7 Histogram\cf0 /P/B=\{0,1,12\} $newloname, $newlohistname\
+	\cf7 Make\cf0 /N=12/O $newhihistname				
+\f2\i \cf3 //use this to make a histogram
+\f1\i0 \cf0 \
+	\cf7 Histogram\cf0 /P/B=\{0,1,12\} $newhiname, $newhihistname\
+	\cf7 display\cf0  $newhihistname\
+	\cf7 appendtograph\cf0  $newlohistname\
+	\cf7 ModifyGraph\cf0  mode=5\
+	\cf7 ModifyGraph\cf0  hbFill($newlohistname)=4\
+\cf4 End\
+\
+\pard\pardeftab720\ri380
+\cf0 \
+
+\f2\i \cf3 //This function makes MT waves - these are 2D waves (3 columns = x y z, 2 rows = start end)
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //The input is from excel where each column is a MT rows are: MT number, startx,starty,startz,endx,endy,endz
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //MTmaker will make MT waves from this list.
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  MTmaker(wavenames)\
+	\cf4 String\cf0  wavenames	
+\f2\i \cf3 //this will be wavelist("wave*",";","")
+\f1\i0 \cf0 \
+	\cf4 String\cf0  name\
+  	\cf4 Variable\cf0  i  
+\f2\i \cf3 //loop Variable
+\f1\i0 \cf0 \
+	\cf4 for\cf0  (i = 0; i < \cf6 ItemsInList\cf0 (wavenames); i += 1)\
+	name = \cf6 StringFromList\cf0 (i,wavenames)\
+	\cf4 Wave\cf0  w1=$name\
+	\cf4 string\cf0  MTwave=\cf5 "MT"\cf0  + \cf6 num2str\cf0 (w1(0))\
+	\cf7 Make\cf0  /O $MTwave=\{\{w1(1),w1(4)\},\{w1(2),w1(5)\},\{w1(3),w1(6)\}\}\
+	\cf4 endfor\cf0 \
+\cf4 End\cf0 \
+\
+\
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //This function compares the angles of MTs relative to one another.
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //It doesn't compare a given MT with itself nor are there replications - handshake problem
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //The result is always positive, so it tells you about deviation from the MT.
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //Result is in degrees (*180/pi). Only results from 0-180 are possible
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //In reality not much beyond 90 is possible because it finds the most acute angle
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //MTs all go in the same direction so this constrains things further\
+//This method was not used in the paper
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  MTpairer(WavesList)\
+	\cf4 String\cf0  WavesList\
+	\cf4 String\cf0  Wave1, Wave2, pair\
+	\cf4 Variable\cf0  nWaves, nsize\
+	\cf4 Variable\cf0  i, j, k\
+	\cf4 Variable\cf0  ABx, CDx, ABy, CDy, ABz, CDz\
+	\
+	nWaves = \cf6 ItemsInList\cf0 (WavesList)\
+	nsize = (nWaves*(nwaves-1))/2\
+	\cf7 Make\cf0  /O /T /N=(nsize) LabelWave\
+	\cf7 Make\cf0  /O /N=(nsize) AngleWave\
+	\
+	\cf4 for\cf0  (i = 0; i < nWaves; i += 1)\
+	Wave1 = \cf6 StringFromList\cf0 (i, WavesList)\
+	\cf4 Wave\cf0 /\cf6 Z\cf0  w1 = $Wave1\
+		\cf4 for\cf0  (j = 0; j < nWaves; j+=1)\
+		Wave2 = \cf6 StringFromList\cf0 (j, WavesList)\
+		\cf4 Wave\cf0 /\cf6 Z\cf0  w2 = $Wave2\
+			\cf4 if\cf0  (j>i)\
+			pair=Wave1 + \cf5 "_"\cf0  + Wave2\
+			LabelWave[k]=pair\
+			ABx=w1[1][0]-w1[0][0]\
+			CDx=w2[1][0]-w2[0][0]\
+			ABy=w1[1][1]-w1[0][1]\
+			CDy=w2[1][1]-w2[0][1]\
+			ABz=w1[1][2]-w1[0][2]\
+			CDz=w2[1][2]-w2[0][2]\
+			AngleWave[k]=\cf6 acos\cf0 (((ABx*CDx)+(ABy*CDy)+(ABz*CDz))/(\cf6 sqrt\cf0 ((ABx^2)+(ABy^2)+(ABz^2))*\cf6 sqrt\cf0 ((CDx^2)+(CDy^2)+(CDz^2))))*(180/\cf6 pi\cf0 )\
+			k+=1\
+			\cf4 endif\cf0 \
+		\cf4 endfor\cf0 \
+	\cf4 endfor\cf0 \
+\cf4 End\cf0 \
+\
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //MTcomparer compares every MT with a reference MT called refMT
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //RefMT is created from finding the centre of the bundle at the start and at the end
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //Otherwise this function is the same as MTpairer.
+\f1\i0 \cf0 \
+
+\f2\i \cf3 //It actually compares refMt to each MT and not the other way around - but this doesn't matter\
+//This method was not used in the paper
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  MTcomparer(WavesList)\
+	\cf4 String\cf0  WavesList\
+	\cf4 String\cf0  Wave1, pair\
+	\cf4 Wave\cf0 /\cf6 Z\cf0  w2 = RefMT\
+	\cf4 Variable\cf0  nWaves\
+	\cf4 Variable\cf0  i\
+	\cf4 Variable\cf0  ABx, CDx, ABy, CDy, ABz, CDz\
+	\
+	nWaves = \cf6 ItemsInList\cf0 (WavesList)\
+	\cf7 Make\cf0  /O /T /N=(nWaves) RefLabelWave\
+	\cf7 Make\cf0  /O /N=(nWaves) RefAngleWave\
+	\cf7 Make\cf0  /O /N=(nWaves) RefDistWave\
+	\
+	\cf4 for\cf0  (i = 0; i < nWaves; i += 1)\
+	Wave1 = \cf6 StringFromList\cf0 (i, WavesList)\
+	\cf4 Wave\cf0 /\cf6 Z\cf0  w1 = $Wave1\
+			pair=\cf5 "RefMT_"\cf0  + Wave1 \
+			RefLabelWave[i]=pair\
+			ABx=w1[1][0]-w1[0][0]\
+			CDx=w2[1][0]-w2[0][0]\
+			ABy=w1[1][1]-w1[0][1]\
+			CDy=w2[1][1]-w2[0][1]\
+			ABz=w1[1][2]-w1[0][2]\
+			CDz=w2[1][2]-w2[0][2]\
+			RefAngleWave[i]=\cf6 acos\cf0 (((ABx*CDx)+(ABy*CDy)+(ABz*CDz))/(\cf6 sqrt\cf0 ((ABx^2)+(ABy^2)+(ABz^2))*\cf6 sqrt\cf0 ((CDx^2)+(CDy^2)+(CDz^2))))*(180/\cf6 pi\cf0 )\
+			
+\f2\i \cf3 //calculate distances
+\f1\i0 \cf0 \
+			RefDistWave[i]=\cf6 sqrt\cf0 (((w1[0][0]-w2[0][0])^2)+((w1[0][1]-w2[0][1])^2))\
+	\cf4 endfor\cf0 \
+\cf4 End\cf0 \
+\
+\
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //find spherical coordinates for each MT
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  SpherCoord([rot]) 	
+\f2\i \cf3 //use () to calculate original MTs, use (rot=1) for rotated MTs
+\f1\i0 \cf0 \
+	\cf4 Variable\cf0  rot\
+	\
+	\cf4 String\cf0  wList\
+	\cf4 If\cf0  (\cf6 paramisdefault\cf0 (rot)==1	)\
+		wList=\cf6 wavelist\cf0 (\cf5 "MT*"\cf0 ,\cf5 ";"\cf0 ,\cf5 ""\cf0 )\
+	\cf4 else\cf0 \
+		wList=\cf6 wavelist\cf0 (\cf5 "rMT*"\cf0 ,\cf5 ";"\cf0 ,\cf5 ""\cf0 )\
+	\cf4 endif\cf0 \
+		\
+	\cf4 String\cf0  wName,wSC\
+	\cf4 Variable\cf0  nWaves\
+	\cf4 Variable\cf0  i\
+	\cf4 Variable\cf0  wx, wy, wz\
+	\
+	\cf4 string\cf0  LabelWName, rWName, thetaWName, phiWName\
+	\
+	\cf4 If\cf0  (\cf6 paramisdefault\cf0 (rot)==1	)\
+		LabelWName=\cf5 "SClabelWave"\cf0 \
+		rWName=\cf5 "SCrWave"\cf0 \
+		thetaWName=\cf5 "SCthetaWave"\cf0 \
+		phiWName=\cf5 "SCphiWave"\cf0 \
+	\cf4 else\cf0 \
+		LabelWName=\cf5 "rSClabelWave"\cf0 \
+		rWName=\cf5 "rSCrWave"\cf0 \
+		thetaWName=\cf5 "rSCthetaWave"\cf0 \
+		phiWName=\cf5 "rSCphiWave"\cf0 \
+	\cf4 endif\cf0 \
+	\
+	nWaves = \cf6 ItemsInList\cf0 (wList)\
+	\cf7 Make\cf0  /O /T /N=(nWaves) $LabelWName\
+	\cf7 Make\cf0  /O /N=(nWaves) $rWName\
+	\cf7 Make\cf0  /O /N=(nWaves) $thetaWName\
+	\cf7 Make\cf0  /O /N=(nWaves) $phiWName\
+\
+	\cf4 Wave\cf0  /T LabelW=$LabelWName\
+	\cf4 Wave\cf0  rW=$rWName\
+	\cf4 Wave\cf0  thetaW=$thetaWName\
+	\cf4 Wave\cf0  phiW=$phiWName\
+\
+	\cf4 for\cf0  (i = 0; i < nWaves; i += 1)\
+	wName = \cf6 StringFromList\cf0 (i, wList)\
+	\cf4 Wave\cf0 /\cf6 Z\cf0  w = $wName\
+			wSC =wName \
+			LabelW[i]=wSc\
+			\
+			wx=w[1][0]-w[0][0]\
+			\cf4 If\cf0   ((wx > -0.001) && (wx < 0.001))	
+\f2\i \cf3 //if statements to prevent errors from rounding
+\f1\i0 \cf0 \
+				wx=0\
+			\cf4 endif\cf0 \
+			wy=w[1][1]-w[0][1]\
+			\cf4 If\cf0   ((wy > -0.001) && (wy < 0.001))\
+				wy=0\
+			\cf4 endif\cf0 			\
+			wz=w[1][2]-w[0][2]\
+			\cf4 If\cf0   ((wz > -0.001) && (wz < 0.001))\
+				wz=0\
+			\cf4 endif\cf0 \
+\
+			rW[i]=\cf6 sqrt\cf0 ((wx^2)+(wy^2)+(wz^2))\
+			thetaW[i]=\cf6 acos\cf0 (wz/(\cf6 sqrt\cf0 ((wx^2)+(wy^2)+(wz^2))))\
+			
+\f2\i \cf3 //need to *(180/pi) to get \'b0			
+\f1\i0 \cf0 \
+			phiW[i]=\cf6 atan2\cf0 (wy,wx)\
+	\cf4 endfor\cf0 \
+	\cf4 Variable\cf0  V_avg,V_sdev\
+	\cf7 Wavestats\cf0  /q rW\
+	\cf7 Print\cf0  \cf5 "Radial distance, r: mean"\cf0 ,V_avg,\cf5 "\'b1"\cf0 ,V_sdev,\cf5 "nm. Median ="\cf0 ,\cf6 Statsmedian\cf0 (rW)\
+	\cf7 Wavestats\cf0  /q thetaW\
+	\cf7 Print\cf0  \cf5 "Polar angle, theta: mean"\cf0 ,V_avg,\cf5 "\'b1"\cf0 ,V_sdev,\cf5 "radians. Median ="\cf0 ,\cf6 Statsmedian\cf0 (thetaW)\
+	\cf7 Wavestats\cf0  /q phiW\
+	\cf7 Print\cf0  \cf5 "Azimuthal angle, phi: mean"\cf0  ,V_avg,\cf5 "\'b1"\cf0 ,V_sdev,\cf5 "radians. Median ="\cf0 ,\cf6 Statsmedian\cf0 (phiW)\
+\cf4 End\cf0 \
+\
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //This function will rotate all MTs by two angles (phi and theta). Resulting waves are called rMT*
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  Straight(phi,theta)\
+	\cf4 variable\cf0  theta,phi		
+\f2\i \cf3 //in radians
+\f1\i0 \cf0 \
+\
+	\cf4 String\cf0  wList=\cf6 wavelist\cf0 (\cf5 "MT*"\cf0 ,\cf5 ";"\cf0 ,\cf5 ""\cf0 )\
+	\cf4 String\cf0  wName\
+	\cf4 Variable\cf0  i\
+\
+	\cf7 Make\cf0 /o zRotationMatrix=\{\{\cf6 cos\cf0 (phi),-\cf6 sin\cf0 (phi),0\},\{\cf6 sin\cf0 (phi),\cf6 cos\cf0 (phi),0\},\{0,0,1\}\}\
+	\cf7 Make\cf0 /o yRotationMatrix=\{\{\cf6 cos\cf0 (theta),0,\cf6 sin\cf0 (theta)\},\{0,1,0\},\{-\cf6 sin\cf0 (theta),0,\cf6 cos\cf0 (theta)\}\}\
+\
+	\cf4 For\cf0  (i = 0; i < \cf6 ItemsInList\cf0 (wList); i += 1)\
+		wName = \cf6 StringFromList\cf0 (i, wList)\
+		\cf4 String\cf0  newname=\cf5 "r"\cf0 +wname\
+		\cf4 Wave\cf0 /\cf6 Z\cf0  w = $wName\
+		\cf7 MatrixMultiply\cf0  w,zRotationMatrix\
+		\cf4 Wave\cf0  M_Product\
+		\cf7 MatrixMultiply\cf0  M_Product,yRotationMatrix\
+		\cf7 Duplicate\cf0  /o M_product $newname\
+	\cf4 EndFor\cf0 \
+\cf4 End\cf0 \
+\
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //This function will find the minimum total x-y distance occupied by rMTs after rotation.\
+//It will rotate through a series of angles and find the lowest point.\
+//It then rotates all MTs by these angles using straight()
+\f1\i0 \cf0 \
+\pard\pardeftab720\ri380
+\cf4 Function\cf0  LowPoint()\
+	\
+	\cf4 variable\cf0  theta,phi			
+\f2\i \cf3 //in radians
+\f1\i0 \cf0 \
+	\cf7 Make\cf0  /o /n=90 MatThetaWave	
+\f2\i \cf3 //90\'b0 is sufficient with no reflection (and reversal of Mt polarity)
+\f1\i0 \cf0 \
+	MatThetaWave =\cf6 x\cf0 /(180/\cf6 PI\cf0 )\
+	\cf7 Make\cf0  /o /n=360 MatPhiWave\
+	MatPhiWave =\cf6 x\cf0 /(180/\cf6 PI\cf0 )		
+\f2\i \cf3 //1\'b0 increments seem OK. For 24 MTs, only 0.03 nm difference for increments from lowpoint
+\f1\i0 \cf0 \
+	\cf7 Make\cf0  /o /n=(360,90) MatResWave\
+\
+	\cf4 String\cf0  wList=\cf6 wavelist\cf0 (\cf5 "MT*"\cf0 ,\cf5 ";"\cf0 ,\cf5 ""\cf0 )\
+	\cf4 String\cf0  wName\
+	\cf4 Variable\cf0  i,j,k\
+	\cf4 Variable\cf0  px			
+\f2\i \cf3 //pixel value: how much MT (x-y distance) would be seen in gizmo en face
+\f1\i0 \cf0 \
+\
+	\cf4 For\cf0  (j = 0; j < \cf6 numpnts\cf0 (MatThetaWave); j +=1)\
+		Theta=MatThetaWave(j)\
+		\cf4 For\cf0  (k = 0; k < \cf6 numpnts\cf0 (MatPhiWave);  k +=1)\
+			px=0\
+			Phi=MatPhiWave(k)\
+			\cf7 Make\cf0 /o zRotationMatrix=\{\{\cf6 cos\cf0 (phi),-\cf6 sin\cf0 (phi),0\},\{\cf6 sin\cf0 (phi),\cf6 cos\cf0 (phi),0\},\{0,0,1\}\}\
+			\cf7 Make\cf0 /o yRotationMatrix=\{\{\cf6 cos\cf0 (theta),0,\cf6 sin\cf0 (theta)\},\{0,1,0\},\{-\cf6 sin\cf0 (theta),0,\cf6 cos\cf0 (theta)\}\}\
+			\cf7 MatrixMultiply\cf0  zRotationMatrix,yRotationMatrix\
+			\cf4 Wave\cf0  M_Product\
+			\cf7 Duplicate\cf0  /O M_Product,zyRotationMatrix\
+				\cf4 For\cf0  (i = 0; i < \cf6 ItemsInList\cf0 (wList); i += 1)\
+					wName = \cf6 StringFromList\cf0 (i, wList)\
+					\cf4 Wave\cf0 /\cf6 Z\cf0  w = $wName\
+					\cf7 MatrixMultiply\cf0  w,zyRotationMatrix\
+					px +=\cf6 sqrt\cf0 (((M_Product[1][0]-M_Product[0][0])^2)+((M_Product[1][1]-M_Product[0][1])^2))\
+				\cf4 EndFor\cf0 \
+			MatResWave[k][j]=px\
+		\cf4 EndFor\cf0 \
+	\cf4 EndFor\cf0 \
+	\cf7 Killwaves\cf0  zRotationMatrix,yRotationMatrix,zyRotationMatrix,M_Product	
+\f2\i \cf3 ///cleanup
+\f1\i0 \cf0 \
+	\cf7 WaveStats\cf0  MatResWave\
+	\cf7 Print\cf0  \cf5 "Rotating z by phi ="\cf0 ,V_minRowLoc/(180/\cf6 PI\cf0 ),\cf5 " and then rotating y by theta = "\cf0 ,V_minColLoc/(180/\cf6 PI\cf0 )\
+	Straight(V_minRowLoc/(180/\cf6 PI\cf0 ),V_minColLoc/(180/\cf6 PI\cf0 ))\
+\cf4 End\cf0 \
+\
+\
+\pard\pardeftab720\ri380
+
+\f2\i \cf3 //This function finds the x,y coordinates of the intersection of mrMT vectors with an xy plane positioned at z=100 nm\
+\pard\pardeftab720\ri380
+
+\f1\i0 \cf4 Function\cf0  MakePlane()					
+\f2\i \cf3 //find intersection of mrMTs with plane at z=100
+\f1\i0 \cf0 \
+	\cf4 Wave\cf0  rSCrWave,rSCthetaWave,rSCphiWave\
+	\cf4 Variable\cf0  i\
+	\cf4 Variable\cf0  n=\cf6 numpnts\cf0 (rSCrWave)\
+	\cf7 Make\cf0  /O /N=(n,2) rSCxyPlaneWave	
+\f2\i \cf3 //x y values in 2D wave
+\f1\i0 \cf0 \
+	\cf4 Variable\cf0  xb,yb,zb,t				
+\f2\i \cf3 //xa,ya,za are 0,0,0 and t will be 100/zb
+\f1\i0 \cf0 \
+	\
+	\cf4 for\cf0 (i = 0;i < n;i +=1)\
+			xb=rSCrWave[i]*(\cf6 sin\cf0 (rSCthetaWave[i]))*(\cf6 cos\cf0 (rSCphiWave[i]))\
+			yb=rSCrWave[i]*(\cf6 sin\cf0 (rSCthetaWave[i]))*(\cf6 sin\cf0 (rSCphiWave[i]))\
+			zb=rSCrWave[i]*(\cf6 cos\cf0 (rSCthetaWave[i]))\
+			t=100/zb\
+			rSCxyPlaneWave[i][0]=xb*t\
+			rSCxyPlaneWave[i][1]=yb*t\
+	\cf4 endfor\cf0 \
+\cf4 End\cf0 \
+\
+\
+}
