@@ -1,7 +1,7 @@
 #pragma rtGlobals=3		// Use modern global access method and strict wave access.
 
 //This function loads all the the bundles from different excel sheets in a directory
-//It makes MT waves like MTMaker does
+//It makes MT waves like MTMaker does.
 Function MTLoader()
 	
 	NewDataFolder/O/S root:data
