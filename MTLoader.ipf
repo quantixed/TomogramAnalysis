@@ -151,8 +151,7 @@ Function BundleStats()
 		//Do Angle Analysis
 		LowPoint()
 		SpherCoord()
-		
-		
+			
 		Else
 			return 0
 		Endif
@@ -162,6 +161,56 @@ Function BundleStats()
 	SetDataFolder root:
 	Edit/K=0  root:stBundleNames,root:stMTWave,root:stAreaWave,root:stDensityWave
 	Execute "TileWindows/O=1/C"
+End
+
+//Extract the data
+Function PullOut(expA,expB)
+	String expA,expB
+	
+	SetDataFolder root:data:
+	DFREF dfr = GetDataFolderDFR()
+	String folderName
+//	Variable numDataFolders = CountObjectsDFR(dfr, 4)
+	Wave /T stB = root:stBundleNames
+	Wave stMT = root:stMTWave
+	Wave stA = root:stAreaWave
+	Wave stD = root:stDensityWave
+	Variable nExp = numpnts(stMT)
+
+	String expC,wName
+	Make/O/N=(nExp) root:stInd
+	Wave stN = root:stInd
+	Variable i, j, k
+	
+	For (i=0; i < ItemsInList(expA); i+=1)
+		For (j=0; j < ItemsInList(expB); j+=1)
+			expC=StringFromList(i,expA) + "_" + StringFromList(j,expB)
+			For (k=0; k < nExp; k+=1)
+				If(stringmatch(stB[k],expC + "*")==1)
+					stN[k]=1
+				Else
+					stN[k]=0
+				EndIf
+			EndFor
+			wName="root:sm" + expC + "MT"
+			Duplicate /O stMT, $wName
+			Wave w0 = $wName
+			wName="root:sm" + expC + "Area"
+			Duplicate /O stA, $wName
+			Wave w1 = $wName
+			wName="root:sm" + expC + "Density"
+			Duplicate /O stD, $wName
+			Wave w2 = $wName
+			Duplicate /O stD, w2
+			w0 = (stN==1) ? w0 : NaN
+			w1 = (stN==1) ? w1 : NaN
+			w2 = (stN==1) ? w2 : NaN
+			WaveTransform zapnans w0
+			WaveTransform zapnans w1
+			WaveTransform zapnans w2
+		EndFor
+	EndFor
+	KillWaves stN
 End
 
 //simplifies busy experiments
