@@ -30,8 +30,8 @@ Function MTLoader()
 		for (i = 0; i < nWaves; i += 1)
 			wName = StringFromList(i,wList)
 			Wave w1 = $wName
-			MTwave = "MT" + num2str(w1(0))
-			Make/O $MTwave={{w1(1),w1(4)},{w1(2),w1(5)},{w1(3),w1(6)}}
+			MTwave = "MT" + num2str(w1[0])
+			Make/O $MTwave = {{w1[1],w1[4]},{w1[2],w1[5]},{w1[3],w1[6]}}
 			KillWaves w1	// not part of MTMaker()
 		endfor
 		SetDataFolder root:data:
@@ -168,9 +168,10 @@ End
 
 // Extract the data
 ////	@param	expA	a semi-colon separated string describing the experimental conditions
-////	@param	expB	a semi-colon separated string describing other experimental conditions
-Function PullOut(expA,expB)
-	String expA,expB // e.g. "control;drug;","warm;cold;" = 4 conditions
+////	@param	expB	an optional semi-colon separated string describing other experimental conditions
+Function PullOut(expA, [expB])
+	String expA,expB // e.g. PullOut("control;drug;",expB="warm;cold;") is 4 conditions
+	// PullOut("control;drug1;drug2;") is 3 conditions
 	
 	SetDataFolder root:data:
 	DFREF dfr = GetDataFolderDFR()
@@ -186,10 +187,10 @@ Function PullOut(expA,expB)
 	Wave stN = root:stInd
 	Variable i, j, k
 	
-	for (i=0; i < ItemsInList(expA); i+=1)
-		for (j=0; j < ItemsInList(expB); j+=1)
+	if(numtype(strlen(expB)) == 2)
+		for (i=0; i < ItemsInList(expA); i+=1)
 			fList = ""
-			expC = StringFromList(i,expA) + "_" + StringFromList(j,expB)
+			expC = StringFromList(i,expA)
 			for (k = 0; k < nExp; k += 1)
 				if(stringmatch(stB[k],expC + "*") == 1)
 					stN[k] = 1
@@ -214,9 +215,9 @@ Function PullOut(expA,expB)
 			WaveTransform zapnans w0
 			WaveTransform zapnans w1
 			WaveTransform zapnans w2
-			If(numpnts(w0)==0)
+			if(numpnts(w0) == 0)
 				KillWaves w0,w1,w2
-			Else
+			else
 				wName="root:sn" + expC + "_refDist"
 				cList=ReplaceString(";", fList, ":RefDistWave;")
 				Concatenate/O/NP=0 cList, $wName
@@ -233,8 +234,58 @@ Function PullOut(expA,expB)
 				cList=ReplaceString(";", fList, ":rSCxyPlaneWave;")
 				Concatenate/O/NP=0 cList, $wName
 			endif
-		EndFor
-	EndFor
+		endfor
+	else
+		for (i=0; i < ItemsInList(expA); i+=1)
+			for (j=0; j < ItemsInList(expB); j+=1)
+				fList = ""
+				expC = StringFromList(i,expA) + "_" + StringFromList(j,expB)
+				for (k = 0; k < nExp; k += 1)
+					if(stringmatch(stB[k],expC + "*") == 1)
+						stN[k] = 1
+						fList = fList + ":" + stB[k] + ";"
+					else
+						stN[k] = 0
+					endif
+				endfor
+				wName = "root:sm" + expC + "_MT"
+				Duplicate/O stMT, $wName
+				Wave w0 = $wName
+				wName = "root:sm" + expC + "_Area"
+				Duplicate/O stA, $wName
+				Wave w1 = $wName
+				wName = "root:sm" + expC + "_Density"
+				Duplicate/O stD, $wName
+				Wave w2 = $wName
+				Duplicate/O stD, w2
+				w0 = (stN==1) ? w0 : NaN
+				w1 = (stN==1) ? w1 : NaN
+				w2 = (stN==1) ? w2 : NaN
+				WaveTransform zapnans w0
+				WaveTransform zapnans w1
+				WaveTransform zapnans w2
+				if(numpnts(w0) == 0)
+					KillWaves w0,w1,w2
+				else
+					wName="root:sn" + expC + "_refDist"
+					cList=ReplaceString(";", fList, ":RefDistWave;")
+					Concatenate/O/NP=0 cList, $wName
+					
+					wName="root:sn" + expC + "_rSCtheta"
+					cList=ReplaceString(";", fList, ":rSCthetaWave;")
+					Concatenate/O/NP=0 cList, $wName
+						
+					wName="root:sn" + expC + "_rSCphi"
+					cList=ReplaceString(";", fList, ":rSCphiWave;")
+					Concatenate/O/NP=0 cList, $wName
+					
+					wName="root:sn" + expC + "_rSCxyPlane"
+					cList=ReplaceString(";", fList, ":rSCxyPlaneWave;")
+					Concatenate/O/NP=0 cList, $wName
+				endif
+			endfor
+		endfor
+	endif
 	KillWaves stN
 	SetDataFolder root:
 End
