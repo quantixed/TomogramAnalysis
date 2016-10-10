@@ -187,7 +187,7 @@ Function PullOut(expA, [expB])
 	Wave stN = root:stInd
 	Variable i, j, k
 	
-	if(numtype(strlen(expB)) == 2)
+	if(paramisdefault(expB))
 		for (i=0; i < ItemsInList(expA); i+=1)
 			fList = ""
 			expC = StringFromList(i,expA)
